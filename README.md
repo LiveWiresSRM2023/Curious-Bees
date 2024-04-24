@@ -1,4 +1,4 @@
-```markdown
+
 # Flask Application with Qdrant Integration
 
 This Flask application integrates with Qdrant for vectorized storing of posts and searching similar posts. It provides endpoints for both storing data and searching for similar content.
