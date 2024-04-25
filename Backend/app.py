@@ -3,8 +3,6 @@ import requests
 import qdrant_client
 from qdrant_client.http import models
 from password import api_key,url
-from transformers import AutoModel, AutoTokenizer
-import torch
 
 # setting up the DB
 client = qdrant_client.QdrantClient(url=url,api_key=api_key)
@@ -17,17 +15,8 @@ app = Flask(__name__)
 
 
 def vectorize_content(id,content):
-    # will vectorised and return the vector, the id comes out unfazed
-    model = AutoModel.from_pretrained("BAAI/bge-small-en-v1.5")
-    tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-small-en-v1.5")
-    encoded_text = tokenizer(content, return_tensors="pt")
-    with torch.no_grad():
-        model_output = model(**encoded_text)
-        embeddings = model_output.pooler_output
-    embedding = embeddings.detach().numpy()
+    # will vectorised and return the vector, the id comes out unfazed, 
     return id,embedding
-    # replace the above model
-
 
 def similarity(id,content):
     # the content is embedded and the id is pinned with it and sends as a dict
