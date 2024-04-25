@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 import requests
 import qdrant_client
 from qdrant_client.http import models
-import numpy as np
 from password import api_key,url
 
 # setting up the DB
