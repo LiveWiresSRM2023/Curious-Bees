@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify
-import requests
 import qdrant_client
 from qdrant_client.http import models
+from qdrant_client.models import Distance, VectorParams
 from password import api_key,url
-import llama_cpp as Llama
+from llama_cpp import Llama
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -16,7 +16,7 @@ if not firebase_admin._apps:
 
 # setting up the DB
 client = qdrant_client.QdrantClient(url=url,api_key=api_key)
-collection_config = models.VectorParams(size=384,distance=models.Distance.COSINE)
+collection_config = models.VectorParams(size=384,distance=models.Distance.DOT)
 
 # assign Qdrant Collection name
 QdrantCollName = "testcollections"
@@ -32,18 +32,19 @@ def vectorize_content(id,content):
     return id,embedding
 
 def similarity(id,content):
-    # the content is embedded and the id is pinned with it and sends as a dict
+    # the content is embedded and searched in db which is then sent for similarity
+    # and the top n results are returned with score and id as key value pair
     id,embedding = vectorize_content(id,content)
     search = client.search(collection_name=QdrantCollName,search_params=models.SearchParams(hnsw_ef=128, exact=False),query_vector=embedding[0],limit=3)
     data = {point.id: point.score for point in search}
     return data
 
 def send_db(id, data):
-    # this vectorises the content and sends it to the db
+    # this vectorises the content and sends it to the db with the same id as it was provided
     id,vector = vectorize_content(id,data)
-    collection_config = models.VectorParams(size=384,distance=models.Distance.COSINE)
-    if client.collection_exists(collection_name=QdrantCollName,vectors_config=collection_config):
-        client.upsert(collection_name = QdrantCollName,points = models.Batch(id =[id],vectors = vector))
+    if not client.collection_exists(collection_name=QdrantCollName):
+      client.create_collection(collection_name=QdrantCollName,vectors_config=collection_config)
+    client.upsert(collection_name=QdrantCollName, points=models.Batch(ids=[id], vectors=vector))
   
 def send_usr(data):
     return jsonify(data)
@@ -51,8 +52,9 @@ def send_usr(data):
 
 def authenticate(uid:str):
     db = firestore.client()
-    query = db.collection(u'srmeureka').where(u'uid', u'==', uid).get()
-    result = [x.to_dict() for x in query] # Get user with the specific 
+    query = db.collection(u'users').where(u'uid', u'==', uid).get()
+    result = [x.to_dict() for x in query] # Get user with the specific
+    print(result)
     if result == []:
         return False
     else:
@@ -67,11 +69,12 @@ def crossroads(data):
 
 @app.route('/', methods=['POST'])
 def process_data():
-    if requests.method == 'POST':
+    if request.method == 'POST':
         data = request.json
-        if 'user_id' in data and 'type' in data and 'content' in data and 'id_token' in data:
+        if 'user_id' in data and 'type' in data and 'content' in data and 'id' in data:
             try:
-                if authenticate(data['user_id']) == False:
+                if authenticate(data['user_id']) == True:
+                    crossroads(data)
                     return jsonify({'msg': 'Data processed successfully'})
                 else:
                     return jsonify({'msg': 'Unauthorized access'})
@@ -84,4 +87,4 @@ def process_data():
         return jsonify({'error': 'Method not allowed'})
     
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=8000)
