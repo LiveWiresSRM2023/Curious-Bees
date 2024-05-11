@@ -76,7 +76,13 @@ def crossroads(data):
     elif data['type'] == 'search':
         send_usr(similarity(data))
 
-@app.route('/', methods=['POST'])
+@app.route('/')
+def home():
+    return jsonify({
+        "Flask API" : "Running"
+    })
+
+@app.route('/post', methods=['POST'])
 def process_data():
     if request.method == 'POST':
         data = request.json
