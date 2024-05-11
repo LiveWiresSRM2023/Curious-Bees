@@ -3,7 +3,7 @@ import qdrant_client
 from qdrant_client.http import models
 from qdrant_client.models import Distance, VectorParams
 from password import api_key,url
-from llama_cpp import Llama
+from llama_cpp import Llama 
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -25,26 +25,35 @@ app = Flask(__name__)
 
 
 def vectorize_content(id,content):
-    model_path = "bge-small-en-1.5-Q_4_K_M.gguf"
+    model_path = "bge-small-en-v1.5-q4_k_m.gguf"
     model = Llama(model_path, embedding=True)
     embedding = model.embed(content)
-    # will vectorised and return the vector, the id comes out unfazed, 
-    return id,embedding
+    # will vectorised and return the vector, the id comes out 
+    print(embedding)
+    return id, embedding
 
-def similarity(id,content):
+def similarity(payload):
     # the content is embedded and searched in db which is then sent for similarity
     # and the top n results are returned with score and id as key value pair
-    id,embedding = vectorize_content(id,content)
+    id, embedding = vectorize_content(payload["payload"], payload["content"])
     search = client.search(collection_name=QdrantCollName,search_params=models.SearchParams(hnsw_ef=128, exact=False),query_vector=embedding[0],limit=3)
     data = {point.id: point.score for point in search}
     return data
 
-def send_db(id, data):
+def send_db(payload):
     # this vectorises the content and sends it to the db with the same id as it was provided
-    id,vector = vectorize_content(id,data)
+    id,vector = vectorize_content(payload["id"], payload["content"])
     if not client.collection_exists(collection_name=QdrantCollName):
       client.create_collection(collection_name=QdrantCollName,vectors_config=collection_config)
-    client.upsert(collection_name=QdrantCollName, points=models.Batch(ids=[id], vectors=vector))
+    print(type(id))
+    print(type(payload))
+    print(type(vector))
+    client.upsert(collection_name=QdrantCollName, points=[
+        models.PointStruct(
+            id = id,
+            vector = vector,
+            payload= payload
+        )])
   
 def send_usr(data):
     return jsonify(data)
@@ -54,7 +63,7 @@ def authenticate(uid:str):
     db = firestore.client()
     query = db.collection(u'users').where(u'uid', u'==', uid).get()
     result = [x.to_dict() for x in query] # Get user with the specific
-    print(result)
+
     if result == []:
         return False
     else:
@@ -63,9 +72,9 @@ def authenticate(uid:str):
 def crossroads(data):
     # will decide what functions to do next based on th content  
     if data['type'] == 'post':
-        send_db(data['id'], data['content'])
+        send_db(data)
     elif data['type'] == 'search':
-        send_usr(similarity(data['id'], data['content']))
+        send_usr(similarity(data))
 
 @app.route('/', methods=['POST'])
 def process_data():
