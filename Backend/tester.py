@@ -6,7 +6,7 @@ url = "http://localhost:8000/"
 
 
 data = {
-    "user_id": "test_user",
+    "user_id": "123",
     "type": "post", 
     "content": "This is some sample content for testing",
     "id": "301f6620-2a27-48f4-a284-be74e0566680"  
