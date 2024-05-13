@@ -1,8 +1,8 @@
 import json
 import requests
 
-url = "https://curious-bees.vercel.app/"
-# url = "http://localhost:8000/"
+# url = "https://curious-bees.vercel.app/"
+url = "http://localhost:8000/post"
 
 
 data = {
