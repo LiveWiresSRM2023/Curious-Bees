@@ -13,7 +13,6 @@ diskcache==5.6.3
 exceptiongroup==1.2.1
 firebase-admin==6.5.0
 Flask==3.0.3
-fcntl
 gunicorn  
 google-api-core==2.18.0
 google-api-python-client==2.127.0
