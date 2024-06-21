@@ -7,6 +7,8 @@ from llama_cpp import Llama
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+import nltk
+from rake_nltk import Rake
 
 # setup firebase
 # Check if the firebase app is already initialized or not
