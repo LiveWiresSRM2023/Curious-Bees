@@ -3,7 +3,7 @@ import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from dotenv import load_dotenv
-
+# unable to get the api key ss the website was tripping 
 load_dotenv()
 
 app = Flask(__name__)
