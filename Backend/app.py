@@ -75,7 +75,12 @@ def crossroads(data):
         send_db(data)
     elif data['type'] == 'search':
         send_usr(similarity(data))
-
+#Function for finding keywords using RAKE 
+def get_keywords(text):
+    nltk.download('stopwords')
+    rake = Rake() 
+    keywords = rake.run(text)
+    return keywords
 @app.route('/')
 def home():
     return jsonify({
@@ -100,6 +105,27 @@ def process_data():
             return jsonify({'error': 'Missing required fields'})
     else:
         return jsonify({'error': 'Method not allowed'})
-    
+
+@app.route('/keywords', methods=['POST'])
+def extract_keywords():
+    if request.method == 'POST':
+        data = request.json
+        if 'content' in data:
+            try:
+                if authenticate(data['user_id']) == True:
+                    content = data['content']
+                    keywords = get_keywords(content)
+                    return jsonify({"keywords": keywords})
+                else:
+                    return jsonify({'msg': 'Unauthorized access'})
+            except Exception as e:
+                print(e)
+                return jsonify({'msg': 'There was an error'})
+        else:
+            return jsonify({'error': 'Missing content field'})
+    else:
+        return jsonify({'error': 'Method not allowed'})
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
