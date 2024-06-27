@@ -27,9 +27,9 @@ collection_config = models.VectorParams(size=384,distance=models.Distance.DOT)
 # assign Qdrant Collection name
 QdrantCollName = "testcollections"
 
-app = Flask(__name__)
-
 SCOPES = ['https://www.googleapis.com/auth/calendar.events']
+
+app = Flask(__name__)
 
 def vectorize_content(id,content):
     model_path = "bge-small-en-v1.5-q4_k_m.gguf"
