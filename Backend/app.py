@@ -1,14 +1,18 @@
 from flask import Flask, request, jsonify
 import qdrant_client
 from qdrant_client.http import models
-from qdrant_client.models import Distance, VectorParams
 from password import api_key,url
 from llama_cpp import Llama 
 import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
+from firebase_admin import credentials,firestore
 import nltk
 from rake_nltk import Rake
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+import uuid 
+import os
 
 # setup firebase
 # Check if the firebase app is already initialized or not
@@ -25,6 +29,7 @@ QdrantCollName = "testcollections"
 
 app = Flask(__name__)
 
+SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 
 def vectorize_content(id,content):
     model_path = "bge-small-en-v1.5-q4_k_m.gguf"
@@ -77,12 +82,34 @@ def crossroads(data):
         send_db(data)
     elif data['type'] == 'search':
         send_usr(similarity(data))
+
 #Function for finding keywords using RAKE 
 def get_keywords(text):
+    nltk.download('punkt')
     nltk.download('stopwords')
     rake = Rake() 
-    keywords = rake.run(text)
+    rake.extract_keywords_from_text(text)
+    keywords = rake.get_ranked_phrases()
     return keywords
+
+
+# Signing into the user's mail id
+def get_credentials():
+    creds = None
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            flow.redirect_uri = 'http://localhost:8080/'  # Fixed redirect URI
+            creds = flow.run_local_server(port=8080)  # Fixed port
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+    return creds
+
 @app.route('/')
 def home():
     return jsonify({
@@ -128,6 +155,59 @@ def extract_keywords():
     else:
         return jsonify({'error': 'Method not allowed'})
 
+@app.route('/create_event', methods=['POST'])
+def create_event():
+    if request.method == 'POST':
+        data = request.json
+        if 'user_id' in data and 'summary' in data and 'description' in data and 'start_time' in data and 'end_time' in data and 'attendees' in data:
+            try:
+                if authenticate(data['user_id']) == True:
+                    summary = data['summary']
+                    description = data['description']
+                    start_time = data['start_time']
+                    end_time = data['end_time']
+                    attendees_emails = data['attendees']
+
+                    creds = get_credentials()
+                    service = build('calendar', 'v3', credentials=creds)
+
+                    attendees = [{'email': email} for email in attendees_emails]
+
+                    event = {
+                        'summary': summary,
+                        'description': description,
+                        'start': {
+                            'dateTime': start_time,
+                            'timeZone': 'America/Los_Angeles',
+                        },
+                        'end': {
+                            'dateTime': end_time,
+                            'timeZone': 'America/Los_Angeles',
+                        },
+                        'attendees': attendees,
+                        'conferenceData': {
+                            'createRequest': {
+                                'requestId': str(uuid.uuid4()),  # Any unique string
+                                'conferenceSolutionKey': {
+                                    'type': 'hangoutsMeet'
+                                }
+                            }
+                        },
+                    }
+
+                    created_event = service.events().insert(calendarId='primary', body=event, conferenceDataVersion=1).execute()
+                    return jsonify({'msg': 'Event created successfully', 'link': created_event.get("htmlLink")})
+
+                else:
+                    return jsonify({'msg': 'Unauthorized access'}), 401
+            except Exception as e:
+                print(e)
+                return jsonify({'msg': 'There was an error', 'error': str(e)}), 500
+        else:
+            return jsonify({'error': 'Missing required fields'}), 400
+    else:
+        return jsonify({'error': 'Method not allowed'}), 405
+
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8000)
+    app.run(debug=True, port=5000)
