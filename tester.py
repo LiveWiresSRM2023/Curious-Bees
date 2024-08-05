@@ -58,11 +58,11 @@ def create_event():
     url = 'http://localhost:5000/create_event'
     data = {
         'user_id': '123',
-        'summary': 'Test Event',
-        'description': 'This is a test event with Google Meet link.',
-        'start_time': '2024-07-01T09:00:00-07:00',  # Adjust the date and time as needed
-        'end_time': '2024-07-01T10:00:00-07:00',    # Adjust the date and time as needed
-        'attendees': 'snikilpaul@gmail.com, another.email@example.com'  # Add more emails separated by commas
+        'summary': 'Vangana vanakanga na',
+        'description': 'Vanga Palagalam.',
+        'start_time': '2024-07-28T04:00:00-07:00',  # Adjust the date and time as needed
+        'end_time': '2024-07-28T05:00:00-07:00',    # Adjust the date and time as needed
+        'attendees': 'snikilpaul@gmail.com, ns6032@srmist.edu.in,rs3322@srmist.edu.in,skroshan.me@gmail.com'  # Add more emails separated by commas
     }
 
     # Convert the attendees to the required format
@@ -79,7 +79,7 @@ def create_event():
         print('Failed to create event:')
         print(response.status_code)
         print(response.text)
-        
+
 def main():
     print("Choose an option:")
     print("1. Test Keyword Extraction")

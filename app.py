@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 import qdrant_client
 from qdrant_client.http import models
-from password import api_key,url
 from llama_cpp import Llama 
 import firebase_admin
 from firebase_admin import credentials,firestore
@@ -21,7 +20,7 @@ if not firebase_admin._apps:
     app = firebase_admin.initialize_app(cred)
 
 # setting up the DB
-client = qdrant_client.QdrantClient(url=url,api_key=api_key)
+client = qdrant_client.QdrantClient(url="localhost:6333")
 collection_config = models.VectorParams(size=384,distance=models.Distance.DOT)
 
 # assign Qdrant Collection name
