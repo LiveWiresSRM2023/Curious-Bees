@@ -2,7 +2,7 @@ import json
 import requests
 
 def test_keyword_extraction():
-    url = "http://localhost:5000/keywords"
+    url = "http://127.0.0.1:7000/keywords"
 
     data = {
         "user_id": "123",
@@ -18,13 +18,13 @@ def test_keyword_extraction():
         print("Error:", response.status_code, response.text)
 
 def post_data():
-    url = "http://localhost:5000/post"
+    url = "http://127.0.0.1:7000/post"
 
     data = {
         "user_id": "123",
         "type": "post",
-        "content": "This is an example post content.",
-        "id": "301f6620-2a27-48f4-a284-be74e0566680"
+        "content": "winners are not loosers",
+        "id": "301f6620-2a27-48f4-a284-be74e0669682"
     }
 
     json_data = json.dumps(data)
@@ -36,7 +36,7 @@ def post_data():
         print("Error:", response.status_code, response.text)
 
 def search_data():
-    url = "http://localhost:5000/post"
+    url = "http://127.0.0.1:7000/post"
 
     data = {
         "user_id": "123",
@@ -55,7 +55,7 @@ def search_data():
 
 
 def create_event():
-    url = 'http://localhost:5000/create_event'
+    url = 'http://65.0.229.242/create_event'
     data = {
         'user_id': '123',
         'summary': 'Vangana vanakanga na',

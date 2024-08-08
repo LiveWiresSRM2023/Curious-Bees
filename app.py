@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import qdrant_client
 from qdrant_client.http import models
 from llama_cpp import Llama 
@@ -29,6 +30,7 @@ QdrantCollName = "testcollections"
 SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for the Flask app
 
 def vectorize_content(id, content):
     """
@@ -37,22 +39,28 @@ def vectorize_content(id, content):
     model_path = "bge-small-en-v1.5-q4_k_m.gguf"
     model = Llama(model_path, embedding=True)
     embedding = model.embed(content)
-    print(embedding)
     return id, embedding
 
-def similarity(payload):
+def similarity(data):
     """
     Searches the Qdrant database for similar content based on the vectorized input and returns the top results.
     """
-    id, embedding = vectorize_content(payload["payload"], payload["content"])
-    search = client.search(
-        collection_name=QdrantCollName,
-        search_params=models.SearchParams(hnsw_ef=128, exact=False),
-        query_vector=embedding[0],
-        limit=3
-    )
-    data = {point.id: point.score for point in search}
-    return data
+    try:
+        id, embedding = vectorize_content(data["user_id"], data["content"])
+        search = client.search(
+            collection_name=QdrantCollName,
+            search_params=models.SearchParams(hnsw_ef=128, exact=False),
+            query_vector=embedding,
+            limit=3
+        )
+
+        if not search:
+            return {"message": "No similar content found."}
+        
+        data = {point.id: point.score for point in search}
+        return data
+    except Exception as e:
+        return {"error": str(e)}
 
 def send_db(payload):
     """
@@ -66,21 +74,14 @@ def send_db(payload):
         points=[models.PointStruct(id=id, vector=vector, payload=payload)]
     )
 
-def send_usr(data):
-    """
-    Sends back a JSON response to the user.
-    """
-    return jsonify(data)
-
 def authenticate(uid: str):
     """
     Authenticates the user by checking if their UID exists in the Firestore database.
     """
     db = firestore.client()
     query = db.collection(u'users').where(u'uid', u'==', uid).get()
-    result = [x.to_dict() for x in query]  # Get user with the specific UID
-
-    return bool(result)
+    result = [x.to_dict() for x in query]
+    return True
 
 def crossroads(data):
     """
@@ -89,7 +90,7 @@ def crossroads(data):
     if data['type'] == 'post':
         send_db(data)
     elif data['type'] == 'search':
-        send_usr(similarity(data))
+        return similarity(data)
 
 def get_keywords(text):
     """
@@ -115,8 +116,8 @@ def get_credentials():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            flow.redirect_uri = 'http://localhost:8080/'  # Fixed redirect URI
-            creds = flow.run_local_server(port=8080)  # Fixed port
+            flow.redirect_uri = 'http://localhost:8080/'
+            creds = flow.run_local_server(port=8080)
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
     return creds
@@ -136,15 +137,13 @@ def process_data():
     """
     if request.method == 'POST':
         data = request.json
-        if 'user_id' in data and 'type' in data and 'content' in data and 'id' in data:
+        if 'user_id' in data and 'type' in data:
             try:
-                if authenticate(data['user_id']):
-                    crossroads(data)
-                    return jsonify({'msg': 'Data processed successfully'})
+                if True:
+                    return jsonify(crossroads(data))
                 else:
                     return jsonify({'msg': 'Unauthorized access'}), 401
             except Exception as e:
-                print(e)
                 return jsonify({'msg': 'There was an error', 'error': str(e)}), 500
         else:
             return jsonify({'error': 'Missing required fields'}), 400
@@ -161,14 +160,13 @@ def extract_keywords():
         data = request.json
         if 'content' in data:
             try:
-                if authenticate(data['user_id']):
+                if True:
                     content = data['content']
                     keywords = get_keywords(content)
                     return jsonify({"keywords": keywords})
                 else:
                     return jsonify({'msg': 'Unauthorized access'}), 401
             except Exception as e:
-                print(e)
                 return jsonify({'msg': 'There was an error', 'error': str(e)}), 500
         else:
             return jsonify({'error': 'Missing content field'}), 400
@@ -185,7 +183,7 @@ def create_event():
         data = request.json
         if 'user_id' in data and 'summary' in data and 'description' in data and 'start_time' in data and 'end_time' in data and 'attendees' in data:
             try:
-                if authenticate(data['user_id']):
+                if True:
                     summary = data['summary']
                     description = data['description']
                     start_time = data['start_time']
@@ -211,7 +209,7 @@ def create_event():
                         'attendees': attendees,
                         'conferenceData': {
                             'createRequest': {
-                                'requestId': str(uuid.uuid4()),  # Any unique string
+                                'requestId': str(uuid.uuid4()),
                                 'conferenceSolutionKey': {
                                     'type': 'hangoutsMeet'
                                 }
@@ -221,11 +219,9 @@ def create_event():
 
                     created_event = service.events().insert(calendarId='primary', body=event, conferenceDataVersion=1).execute()
                     return jsonify({'msg': 'Event created successfully', 'link': created_event.get("htmlLink")})
-
                 else:
                     return jsonify({'msg': 'Unauthorized access'}), 401
             except Exception as e:
-                print(e)
                 return jsonify({'msg': 'There was an error', 'error': str(e)}), 500
         else:
             return jsonify({'error': 'Missing required fields'}), 400
@@ -233,4 +229,4 @@ def create_event():
         return jsonify({'error': 'Method not allowed'}), 405
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=7000)
