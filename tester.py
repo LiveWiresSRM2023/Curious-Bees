@@ -1,104 +1,96 @@
-import json
 import requests
+import uuid
+import json
 
-def test_keyword_extraction():
-    url = "http://127.0.0.1:7000/keywords"
+BASE_URL = "http://localhost:7000"
 
-    data = {
-        "user_id": "123",
-        "content": "This is an example of content for keyword extraction."
-    }
+def print_response_details(response):
+    print(f"Status Code: {response.status_code}")
+    print(f"Response Content: {response.text}")
+    try:
+        print("Response JSON:", response.json())
+    except json.JSONDecodeError:
+        print("Failed to decode JSON, raw response is shown above.")
 
-    json_data = json.dumps(data)
-    response = requests.post(url, data=json_data, headers={"Content-Type": "application/json"})
+def test_home():
+    response = requests.get(f"{BASE_URL}/")
+    print("Home Route Response:")
+    print_response_details(response)
 
-    if response.status_code == 200:
-        print("Success! Response:", response.json())
-    else:
-        print("Error:", response.status_code, response.text)
-
-def post_data():
-    url = "http://127.0.0.1:7000/post"
-
-    data = {
-        "user_id": "123",
+def test_post_data(user_id, vector_id, content):
+    payload = {
+        "user_id": user_id,
         "type": "post",
-        "content": "winners are not loosers",
-        "id": "301f6620-2a27-48f4-a284-be74e0669682"
+        "id": vector_id,
+        "content": content
     }
+    response = requests.post(f"{BASE_URL}/posthandler", json=payload)
+    print("Post Data Response:")
+    print_response_details(response)
 
-    json_data = json.dumps(data)
-    response = requests.post(url, data=json_data, headers={"Content-Type": "application/json"})
-
-    if response.status_code == 200:
-        print("Success! Response:", response.json())
-    else:
-        print("Error:", response.status_code, response.text)
-
-def search_data():
-    url = "http://127.0.0.1:7000/post"
-
-    data = {
-        "user_id": "123",
-        "type": "search",
-        "content": "This is the content to search for.",
-        "id": "301f6620-2a27-48f4-a284-be74e0566680"
+def test_delete_vector(user_id, vector_id):
+    payload = {
+        "user_id": user_id,
+        "type": "delete",
+        "id": vector_id
     }
+    response = requests.post(f"{BASE_URL}/posthandler", json=payload)
+    print("Delete Vector Response:")
+    print_response_details(response)
 
-    json_data = json.dumps(data)
-    response = requests.post(url, data=json_data, headers={"Content-Type": "application/json"})
-
-    if response.status_code == 200:
-        print("Success! Response:", response.json())
-    else:
-        print("Error:", response.status_code, response.text)
-
-
-def create_event():
-    url = 'http://65.0.229.242/create_event'
-    data = {
-        'user_id': '123',
-        'summary': 'Vangana vanakanga na',
-        'description': 'Vanga Palagalam.',
-        'start_time': '2024-07-28T04:00:00-07:00',  # Adjust the date and time as needed
-        'end_time': '2024-07-28T05:00:00-07:00',    # Adjust the date and time as needed
-        'attendees': 'snikilpaul@gmail.com, ns6032@srmist.edu.in,rs3322@srmist.edu.in,skroshan.me@gmail.com'  # Add more emails separated by commas
+def test_search(user_id, content):
+    payload = {
+        "user_id": user_id,
+        "content": content
     }
+    response = requests.post(f"{BASE_URL}/search", json=payload)
+    print("Search Response:")
+    print_response_details(response)
 
-    # Convert the attendees to the required format
-    attendees_list = [email.strip() for email in data['attendees'].split(',')]
-    data['attendees'] = attendees_list
+def test_extract_keywords(user_id, content):
+    payload = {
+        "user_id": user_id,
+        "content": content
+    }
+    response = requests.post(f"{BASE_URL}/keywords", json=payload)
+    print("Extract Keywords Response:")
+    print_response_details(response)
 
-    json_data = json.dumps(data)
-    response = requests.post(url, data=json_data, headers={"Content-Type": "application/json"})
+def test_create_event(user_id, summary, description, start_time, end_time, attendees):
+    payload = {
+        "user_id": user_id,
+        "summary": summary,
+        "description": description,
+        "start_time": start_time,
+        "end_time": end_time,
+        "attendees": attendees
+    }
+    response = requests.post(f"{BASE_URL}/create_event", json=payload)
+    print("Create Event Response:")
+    print_response_details(response)
 
-    if response.status_code == 200:
-        print('Event created successfully:')
-        print(response.json())
-    else:
-        print('Failed to create event:')
-        print(response.status_code)
-        print(response.text)
+if __name__ == "__main__":
+    # Test home route
+    test_home()
+    stri=str(uuid.uuid4())
+    # Test post data
+    test_post_data(user_id="123", vector_id=stri, content="This is not a sample content to store in the database.")
 
-def main():
-    print("Choose an option:")
-    print("1. Test Keyword Extraction")
-    print("2. Post Data")
-    print("3. Search Data")
-    print("4. Create Event")
+    # Test search
+    test_search(user_id="123", content="This is a sample content to search for.")
 
-    choice = input("Enter your choice (1, 2, 3 or 4): ")
+    # Test extract keywords
+    test_extract_keywords(user_id="123", content="Extract keywords from this content using RAKE algorithm.")
 
-    if choice == '1':
-        test_keyword_extraction()
-    elif choice == '2':
-        post_data()
-    elif choice == '3':
-        search_data()
-    elif choice == '4':
-        create_event()
-    else:
-        print("Invalid choice. Please enter 1, 2, 3 or 4.")
+    # Test delete vector
+    test_delete_vector(user_id="123", vector_id=stri)
 
-if __name__ == '__main__':
-    main()
+    # Test create event
+    test_create_event(
+        user_id="123",
+        summary="Team Meeting",
+        description="Discuss project updates and timelines.",
+        start_time="2024-08-11T10:00:00-07:00",
+        end_time="2024-08-11T11:00:00-07:00",
+        attendees=["attendee1@example.com", "attendee2@example.com"]
+    )

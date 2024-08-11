@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import qdrant_client
 from qdrant_client.http import models
-from llama_cpp import Llama 
+from llama_cpp import Llama
 import firebase_admin
 from firebase_admin import credentials, firestore
 import nltk
@@ -11,13 +11,13 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-import uuid 
+import uuid
 import os
 
 # Initialize Firebase Admin SDK with the service account key if not already initialized
 if not firebase_admin._apps:
     cred = credentials.Certificate("serviceKey.json")
-    app = firebase_admin.initialize_app(cred)
+    firebase_admin.initialize_app(cred)
 
 # Set up the Qdrant client and collection configuration
 client = qdrant_client.QdrantClient(url="localhost:6333")
@@ -74,6 +74,20 @@ def send_db(payload):
         points=[models.PointStruct(id=id, vector=vector, payload=payload)]
     )
 
+def delete_vector(vector_id):
+    """
+    Deletes a vector from the Qdrant database based on the provided vector ID.
+    """
+    try:
+        client.delete(
+            collection_name=QdrantCollName,
+            points_selector=models.PointIdsList(
+        points=[vector_id])
+        )
+        return {"status": "Vector deleted successfully", "vector_id": vector_id}
+    except Exception as e:
+        return {"error": str(e)}
+
 def authenticate(uid: str):
     """
     Authenticates the user by checking if their UID exists in the Firestore database.
@@ -81,16 +95,24 @@ def authenticate(uid: str):
     db = firestore.client()
     query = db.collection(u'users').where(u'uid', u'==', uid).get()
     result = [x.to_dict() for x in query]
-    return True
 
-def crossroads(data):
+    if result == []:
+        return False
+    else:
+        return True
+
+def posthandler(data):
     """
     Routes the request to the appropriate function based on the 'type' in the request data.
+    Handles both posting data and deleting vectors.
     """
     if data['type'] == 'post':
         send_db(data)
-    elif data['type'] == 'search':
-        return similarity(data)
+        return {"status": "Data stored successfully"}
+    elif data['type'] == 'delete':
+        return delete_vector(data['id'])
+    else:
+        return {"error": "Invalid type provided"}
 
 def get_keywords(text):
     """
@@ -129,10 +151,10 @@ def home():
     """
     return jsonify({"Flask API": "Running"})
 
-@app.route('/post', methods=['POST'])
+@app.route('/posthandler', methods=['POST'])
 def process_data():
     """
-    Processes incoming data for either storage or similarity search based on the request type.
+    Processes incoming data for either storage or deletion based on the request type.
     Authentication is required.
     """
     if request.method == 'POST':
@@ -140,7 +162,28 @@ def process_data():
         if 'user_id' in data and 'type' in data:
             try:
                 if True:
-                    return jsonify(crossroads(data))
+                    return jsonify(posthandler(data))
+                else:
+                    return jsonify({'msg': 'Unauthorized access'}), 401
+            except Exception as e:
+                return jsonify({'msg': 'There was an error', 'error': str(e)}), 500
+        else:
+            return jsonify({'error': 'Missing required fields'}), 400
+    else:
+        return jsonify({'error': 'Method not allowed'}), 405
+
+@app.route('/search', methods=['POST'])
+def search_data():
+    """
+    Handles the search functionality separately.
+    Authentication is required.
+    """
+    if request.method == 'POST':
+        data = request.json
+        if 'user_id' in data and 'content' in data:
+            try:
+                if True:
+                    return jsonify(similarity(data))
                 else:
                     return jsonify({'msg': 'Unauthorized access'}), 401
             except Exception as e:

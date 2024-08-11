@@ -1,118 +1,93 @@
-Here's an updated version of the README, including details for both posting and searching through the `/post` endpoint:
+# Flask Backend For Curious Bees
 
----
+## Overview
 
-# Flask API Application
-
-This Flask application is designed to handle several functionalities, including user authentication, vectorizing content, storing and searching vectors using Qdrant, keyword extraction using RAKE, and creating Google Calendar events. Below is a detailed guide to understanding and running the application.
-
-## Table of Contents
-- [Features](#features)
-- [Setup and Installation](#setup-and-installation)
-- [Environment Variables](#environment-variables)
-- [Running the Application](#running-the-application)
-- [API Endpoints](#api-endpoints)
-- [Usage](#usage)
-- [Dependencies](#dependencies)
+This Flask application provides a REST API for storing, searching, and managing content in a Qdrant database, extracting keywords using RAKE, and creating events in Google Calendar. It includes endpoints for posting and deleting data, searching for similar content, extracting keywords, and creating calendar events.
 
 ## Features
-1. **User Authentication**: Authenticate users using Firebase Firestore.
-2. **Vectorization and Similarity Search**: Vectorize content using `llama-cpp-python` and perform similarity searches using Qdrant.
-3. **Keyword Extraction**: Extract keywords from text using RAKE.
-4. **Google Calendar Integration**: Create calendar events using Google Calendar API.
 
-## Setup and Installation
+- **Content Management**: Store and delete content vectors in a Qdrant database.
+- **Similarity Search**: Search for similar content based on vector similarity.
+- **Keyword Extraction**: Extract keywords from content using the RAKE algorithm.
+- **Google Calendar Integration**: Create events in Google Calendar with the ability to include Google Meet links.
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/LiveWiresSRM2023/Curious-Bees.git
-cd Curious-Bees/Curious-backend/Curious-Bees
-```
+## Dependencies
 
-### 2. Create and Activate Virtual Environment
-```bash
-python -m venv env
-source env/bin/activate  # On Windows use `env\Scripts\activate`
-```
+- `Flask` - A micro web framework for Python.
+- `Flask-CORS` - To enable CORS (Cross-Origin Resource Sharing).
+- `qdrant-client` - Qdrant client library for interacting with the Qdrant database.
+- `llama-cpp` - For vectorizing content.
+- `firebase-admin` - Firebase Admin SDK for Firebase authentication.
+- `nltk` - Natural Language Toolkit for text processing.
+- `rake-nltk` - RAKE (Rapid Automatic Keyword Extraction) implementation for Python.
+- `google-auth` - Google Authentication libraries.
+- `google-auth-oauthlib` - OAuth 2.0 client for Google services.
+- `google-api-python-client` - Google API client library.
+- `requests` - For making HTTP requests.
 
-### 3. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
+## Installation
 
-### 4. Firebase Setup
-- Place your Firebase service account key file `serviceKey.json` in the root directory of your project.
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/LiveWiresSRM2023/Curious-Bees.git
+   cd Curious-Bees
+   ```
 
-### 5. Google Calendar API Setup
-- Ensure you have `credentials.json` for Google Calendar API in the root directory.
-- Generate `token.json` after the first OAuth2.0 flow.
+2. **Create and Activate a Virtual Environment:**
+   ```bash
+   python -m venv env
+   source env/bin/activate  # On Windows use `env\Scripts\activate`
+   ```
 
-## Environment Variables
-Make sure to set the following environment variables:
+3. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-- `GOOGLE_APPLICATION_CREDENTIALS`: Path to your `serviceKey.json` file for Firebase.
-
-Example:
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS="path/to/serviceKey.json"
-```
+4. **Set Up Environment Variables:**
+   Ensure you have the following files in your project directory:
+   - `serviceKey.json` - Firebase Admin SDK service account key.
+   - `credentials.json` - Google API credentials file for OAuth 2.0.
 
 ## Running the Application
+
+To start the Flask application, run:
 ```bash
 python app.py
 ```
 
-The application will run on `http://127.0.0.1:5000/` by default.
+The application will be available at `http://localhost:7000`.
 
 ## API Endpoints
 
-### 1. Home
-- **URL**: `/`
-- **Method**: `GET`
-- **Description**: Check if the API is running.
-- **Response**: `{"Flask API" : "Running"}`
+### 1. **Home Route**
 
-### 2. Process Data
-- **URL**: `/post`
-- **Method**: `POST`
-- **Description**: Process data by either storing it in the database or performing a similarity search based on the provided `type` field.
-- **Request Body**:
+- **GET** `/`
+- **Description**: Check if the Flask API is running.
+- **Response**: `{"Flask API": "Running"}`
+
+### 2. **Post and Delete Data**
+
+- **POST** `/posthandler`
+- **Description**: Handles both posting data to the Qdrant database and deleting vectors based on the `type` in the request data.
+- **Request Payload**:
   ```json
   {
     "user_id": "string",
-    "type": "string",  // 'post' for storing data, 'search' for similarity search
-    "content": "string",
-    "id": "string"
+    "type": "post" | "delete",
+    "id": "string",
+    "content": "string"  // Only for type "post"
   }
   ```
 - **Response**: 
-  - For `type: post`:
-    ```json
-    {
-      "msg": "Data processed successfully"
-    }
-    ```
-  - For `type: search`:
-    ```json
-    {
-      "id1": score1,
-      "id2": score2,
-      "id3": score3
-    }
-    ```
-  - Unauthorized or Error:
-    ```json
-    {
-      "msg": "Unauthorized access"  // or
-      "msg": "There was an error"
-    }
-    ```
+  - For posting: `{"status": "Data stored successfully"}`
+  - For deletion: `{"status": "Vector deleted successfully", "vector_id": "string"}`
 
-### 3. Extract Keywords
-- **URL**: `/keywords`
-- **Method**: `POST`
-- **Description**: Extract keywords from the provided text content.
-- **Request Body**:
+### 3. **Search for Similar Content**
+
+- **POST** `/search`
+- **Description**: Searches for similar content based on the vectorized input.
+- **Request Payload**:
   ```json
   {
     "user_id": "string",
@@ -122,78 +97,61 @@ The application will run on `http://127.0.0.1:5000/` by default.
 - **Response**:
   ```json
   {
-    "keywords": ["keyword1", "keyword2", "keyword3"]
+    "id": "score",
+    ...
   }
   ```
 
-### 4. Create Event
-- **URL**: `/create_event`
-- **Method**: `POST`
-- **Description**: Create a Google Calendar event.
-- **Request Body**:
+### 4. **Extract Keywords**
+
+- **POST** `/keywords`
+- **Description**: Extracts keywords from the provided content using RAKE.
+- **Request Payload**:
+  ```json
+  {
+    "user_id": "string",
+    "content": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "keywords": ["keyword1", "keyword2", ...]
+  }
+  ```
+
+### 5. **Create Google Calendar Event**
+
+- **POST** `/create_event`
+- **Description**: Creates a Google Calendar event with the provided details.
+- **Request Payload**:
   ```json
   {
     "user_id": "string",
     "summary": "string",
     "description": "string",
-    "start_time": "string",
-    "end_time": "string",
-    "attendees": ["string"]
+    "start_time": "string (ISO 8601 format)",
+    "end_time": "string (ISO 8601 format)",
+    "attendees": ["email1@example.com", "email2@example.com", ...]
   }
   ```
 - **Response**:
   ```json
   {
     "msg": "Event created successfully",
-    "link": "event_link"
+    "link": "string (event link)"
   }
   ```
 
-## Usage
+## Notes
 
-### Example: Process Data
-#### Posting Data
-```bash
-curl -X POST http://127.0.0.1:5000/post -H "Content-Type: application/json" -d '{
-  "user_id": "user123",
-  "type": "post",
-  "content": "This is a test content.",
-  "id": "content123"
-}'
-```
+- **Authentication**: The current implementation of authentication always returns `True`. Update the `process_data`, `search_data`, and `extract_keywords` routes to include proper authentication checks if needed.
+- **Error Handling**: Ensure proper error handling in your production environment.
+- **Testing**: Use the `tester.py` script to test different endpoints. Update the script with actual endpoint paths and payloads.
 
-#### Searching Data
-```bash
-curl -X POST http://127.0.0.1:5000/post -H "Content-Type: application/json" -d '{
-  "user_id": "user123",
-  "type": "search",
-  "content": "This is a test content.",
-  "id": "content123"
-}'
-```
+## Contributing
 
-### Example: Extract Keywords
-```bash
-curl -X POST http://127.0.0.1:5000/keywords -H "Content-Type: application/json" -d '{
-  "user_id": "user123",
-  "content": "This is a sample text for keyword extraction."
-}'
-```
-
-### Example: Create Event
-```bash
-curl -X POST http://127.0.0.1:5000/create_event -H "Content-Type: application/json" -d '{
-  "user_id": "user123",
-  "summary": "Team Meeting",
-  "description": "Discussion about the upcoming project.",
-  "start_time": "2024-08-15T10:00:00-07:00",
-  "end_time": "2024-08-15T11:00:00-07:00",
-  "attendees": ["email1@example.com", "email2@example.com"]
-}'
-```
+Feel free to submit issues or pull requests to enhance the functionality of this application.
 
 
 
-For any issues or contributions, feel free to raise a pull request or create an issue in the repository.
-
----
