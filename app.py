@@ -1,148 +1,19 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import qdrant_client
-from qdrant_client.http import models
-from llama_cpp import Llama
-import firebase_admin
-from firebase_admin import credentials, firestore
-import nltk
-from rake_nltk import Rake
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
 import uuid
-import os
+from utils import authenticate, posthandler, get_keywords, get_credentials
+from qdrant_utils import  similarity
+from googleapiclient.discovery import build
+import firebase_admin
+from firebase_admin import credentials
 
 # Initialize Firebase Admin SDK with the service account key if not already initialized
 if not firebase_admin._apps:
     cred = credentials.Certificate("serviceKey.json")
     firebase_admin.initialize_app(cred)
 
-# Set up the Qdrant client and collection configuration
-client = qdrant_client.QdrantClient(url="localhost:6333")
-collection_config = models.VectorParams(size=384, distance=models.Distance.DOT)
-
-# Qdrant collection name
-QdrantCollName = "testcollections"
-
-# Google Calendar API scopes
-SCOPES = ['https://www.googleapis.com/auth/calendar.events']
-
 app = Flask(__name__)
 CORS(app)  # Enable CORS for the Flask app
-
-def vectorize_content(id, content):
-    """
-    Vectorizes the provided content using the Llama model and returns the vector and ID.
-    """
-    model_path = "bge-small-en-v1.5-q4_k_m.gguf"
-    model = Llama(model_path, embedding=True)
-    embedding = model.embed(content)
-    return id, embedding
-
-def similarity(data):
-    """
-    Searches the Qdrant database for similar content based on the vectorized input and returns the top results.
-    """
-    try:
-        id, embedding = vectorize_content(data["user_id"], data["content"])
-        search = client.search(
-            collection_name=QdrantCollName,
-            search_params=models.SearchParams(hnsw_ef=128, exact=False),
-            query_vector=embedding,
-            limit=3
-        )
-
-        if not search:
-            return {"message": "No similar content found."}
-        
-        data = {point.id: point.score for point in search}
-        return data
-    except Exception as e:
-        return {"error": str(e)}
-
-def send_db(payload):
-    """
-    Vectorizes the content and sends it to the Qdrant database with the provided ID.
-    """
-    id, vector = vectorize_content(payload["id"], payload["content"])
-    if not client.collection_exists(collection_name=QdrantCollName):
-        client.create_collection(collection_name=QdrantCollName, vectors_config=collection_config)
-    client.upsert(
-        collection_name=QdrantCollName, 
-        points=[models.PointStruct(id=id, vector=vector, payload=payload)]
-    )
-
-def delete_vector(vector_id):
-    """
-    Deletes a vector from the Qdrant database based on the provided vector ID.
-    """
-    try:
-        client.delete(
-            collection_name=QdrantCollName,
-            points_selector=models.PointIdsList(
-        points=[vector_id])
-        )
-        return {"status": "Vector deleted successfully", "vector_id": vector_id}
-    except Exception as e:
-        return {"error": str(e)}
-
-def authenticate(uid: str):
-    """
-    Authenticates the user by checking if their UID exists in the Firestore database.
-    """
-    db = firestore.client()
-    query = db.collection(u'users').where(u'uid', u'==', uid).get()
-    result = [x.to_dict() for x in query]
-
-    if result == []:
-        return False
-    else:
-        return True
-
-def posthandler(data):
-    """
-    Routes the request to the appropriate function based on the 'type' in the request data.
-    Handles both posting data and deleting vectors.
-    """
-    if data['type'] == 'post':
-        send_db(data)
-        return {"status": "Data stored successfully"}
-    elif data['type'] == 'delete':
-        return delete_vector(data['id'])
-    else:
-        return {"error": "Invalid type provided"}
-
-def get_keywords(text):
-    """
-    Extracts keywords from the provided text using the RAKE algorithm.
-    """
-    nltk.download('punkt')
-    nltk.download('stopwords')
-    rake = Rake()
-    rake.extract_keywords_from_text(text)
-    keywords = rake.get_ranked_phrases()
-    return keywords
-
-def get_credentials():
-    """
-    Authenticates and returns Google Calendar API credentials.
-    If the credentials are expired or not present, the user is prompted to log in.
-    """
-    creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            flow.redirect_uri = 'http://localhost:8080/'
-            creds = flow.run_local_server(port=8080)
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-    return creds
 
 @app.route('/')
 def home():
