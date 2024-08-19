@@ -1,0 +1,128 @@
+{
+  "post_analysis": {
+    "post_titles": [
+      "Understanding Machine Learning",
+      "Introduction to Python",
+      "Data Science Best Practices",
+      "Web Development with Flask",
+      "Firebase Authentication Guide"
+    ],
+    "post_upvotes": [
+      150,
+      200,
+      250,
+      175,
+      300
+    ],
+    "hashtags_labels": [
+      "#datascience",
+      "#python",
+      "#webdevelopment",
+      "#machinelearning",
+      "#firebase"
+    ],
+    "hashtags_values": [
+      2,
+      3,
+      1,
+      1,
+      1
+    ],
+    "top_5_post_titles": [
+      "Firebase Authentication Guide",
+      "Data Science Best Practices",
+      "Introduction to Python",
+      "Web Development with Flask",
+      "Understanding Machine Learning"
+    ],
+    "top_5_post_upvotes": [
+      300,
+      250,
+      200,
+      175,
+      150
+    ]
+  },
+  "event_analysis": {
+    "status_labels": [
+      "Scheduled",
+      "Completed",
+      "Ongoing"
+    ],
+    "status_values": [
+      5,
+      3,
+      2
+    ],
+    "venue_labels": [
+      "Auditorium",
+      "Conference Hall",
+      "Online"
+    ],
+    "venue_values": [
+      4,
+      3,
+      3
+    ],
+    "time_slots_labels": [
+      "Morning",
+      "Afternoon",
+      "Evening",
+      "Night"
+    ],
+    "time_slots_values": [
+      3,
+      4,
+      3,
+      1
+    ]
+  },
+  "profile_analysis": {
+    "college_labels": [
+      "ABC University",
+      "XYZ University",
+      "LMN Institute"
+    ],
+    "college_values": [
+      100,
+      75,
+      50
+    ],
+    "department_labels": [
+      "Computer Science",
+      "Information Technology",
+      "Data Science"
+    ],
+    "department_values": [
+      80,
+      90,
+      55
+    ],
+    "position_labels": [
+      "Student",
+      "Instructor",
+      "Researcher"
+    ],
+    "position_values": [
+      150,
+      30,
+      45
+    ]
+  },
+  "user_analysis": {
+    "dates": [
+      "2024-07-01",
+      "2024-07-02",
+      "2024-07-03",
+      "2024-07-04",
+      "2024-07-05"
+    ],
+    "user_counts": [
+      20,
+      35,
+      25,
+      40,
+      50
+    ]
+  }
+}
